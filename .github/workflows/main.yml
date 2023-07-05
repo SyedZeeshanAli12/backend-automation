@@ -1,57 +1,30 @@
-name: Cypress Tests and Deployment
-
-on:
-  push:
-    branches:
-      - main
-
+name: End-to-end tests
+on: [push]
 jobs:
-  cypress-tests:
-    runs-on: ubuntu-latest
-
+  cypress-run:
+    runs-on: ubuntu-22.04
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
+      - name: Checkout
+        uses: actions/checkout@v3
+      # Install NPM dependencies, cache them correctly
+      # and run all Cypress tests
+      # https://github.com/cypress-io/github-action
+      - name: Cypress run
+        uses: cypress-io/github-action@v5
+      # after the test run completes
+      # store videos and any screenshots
+      # NOTE: screenshots will be generated only if E2E test failed
+      # thus we store screenshots only on failures
+      # Alternative: create and commit an empty cypress/screenshots folder
+      # to always have something to upload
+      - uses: actions/upload-artifact@v3
+        if: failure()
         with:
-          node-version: 14
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Run Cypress Tests
-        run: npx cypress run --config-file cypress.config.js --env configFile=api --reporter mochawesome --reporter-options "reportDir=cypress/reports,reportFilename=api-tests-report,html=true"
-
-
-      - name: Archive Test Reports
-        uses: actions/upload-artifact@v2
+          name: cypress-screenshots
+          path: cypress/screenshots
+      # Test run video was always captured, so this action uses "always()" condition
+      - uses: actions/upload-artifact@v3
+        if: always()
         with:
-          name: Test Reports
-          path: cypress/reports
-          github_token: ${{ secrets.MY_SECRET }}
-
-
-  deploy:
-    needs: cypress-tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: 14
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Deploy to GitHub Pages
-        run: |
-          git config --global user.email "zeeshan.ali@invozone.com"
-          git config --global user.name "zeeshanali877"
-          npm run deploy
-
+          name: cypress-videos
+          path: cypress/videos
